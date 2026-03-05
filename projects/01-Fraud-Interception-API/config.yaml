@@ -1,0 +1,15 @@
+# 核心架构与阈值配置文件 (Architecture Configuration)
+model_params:
+  max_depth: 6
+  learning_rate: 0.05
+  n_estimators: 100
+  random_state: 42
+
+thresholds:
+  critical_api_lock: 0.90   # 触发 17.44ms 物理冻结的斩首线
+  mfa_verification: 0.20    # 触发短信验证的摩擦底线
+
+paths:
+  data_source: "data/creditcard.csv"
+  xgb_model: "model/xgboost_fraud_engine.json"
+  scaler: "model/robust_scaler.pkl"

@@ -1,0 +1,9 @@
+
+azure-functions
+xgboost>=2.0.0
+scikit-learn
+pandas
+numpy
+imbalanced-learn
+PyYAML
+joblib
