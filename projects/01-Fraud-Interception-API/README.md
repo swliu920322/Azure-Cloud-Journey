@@ -1,22 +1,35 @@
-# Low-Latency Fraud Prevention API (Azure-Native Architecture)
+# Enterprise Fraud Interception API (Azure-Native Architecture)
+# (企业级金融反欺诈拦截 API - 云原生架构)
 
-## 🏗 Architectural Overview
-This repository contains the physical execution layer for a high-frequency financial fraud interception engine. It bypasses fragile GUI-based RPA systems, directly wiring an XGBoost predictive model to an **Azure Serverless (Function App)** backend.
+## ⚡ Performance Benchmark (性能实证)
 
-By explicitly forcing the API routing matrix, the system neutralizes unauthorized financial payloads before the standard **50ms core banking gateway timeout**.
+**English:** To validate the sub-30ms architectural requirement, we executed a full-stack pressure test on the Azure Function (Consumption Plan). The end-to-end latency, including network handshake and XGBoost inference, is stabilized at **22ms**.
 
-### ⚡ Performance Benchmarks (Proof of Concept)
-* **Inference Engine:** XGBoost (Constrained via Taylor Expansion Gain, `max_depth=6`)
-* **Critical Freeze Threshold:** `P(Y=1|X) >= 0.90`
-* **MFA Verification Friction:** `2.89%` of legitimate traffic
-* **Execution Latency:** Clocked at **22ms** on Azure Consumption Plan (Target P95: 17.44ms on Premium Tier).
+**中文：** 为验证 30ms 以内的架构需求，我们在 Azure Function（消耗计划）上执行了全栈压力测试。包含网络握手与 XGBoost 推理在内的端到端延迟稳定在 **22ms**。
 
-![Azure API 压测实证](assets/delay.png)
+<p align="left">
+  <img src="assets/delay.png" alt="22ms Latency Proof" width="500">
+  <br>
+  <i>Figure 1: Postman latency verification (Clocked at 22ms)</i>
+</p>
 
-## ⚙️ Repository Structure
-* `train_pipeline.py`: Executes data ingestion, SMOTE topological rewriting, and exports the serialized `.json` model.
-* `inference_api.py`: The stateless Azure Function handler. Loads the model in the global namespace to eliminate cold-start penalties during high-throughput bursts.
-* `config.yaml`: Centralized control plane for hyperparameters and routing thresholds.
+---
 
-## 🚀 Deployment (Azure)
-This pipeline is designed to be deployed directly to Azure Functions and fronted by Azure API Management (APIM) for rate-limiting and JWT authentication.
+## 🏗 System Architecture (系统架构)
+
+
+
+### Key Modules (核心模块):
+1. **Inference Engine (`src/inference_api.py`):** Stateless Python handler optimized for cold-start mitigation.
+2. **Training Pipeline (`src/train_pipeline.py`):** Implements SMOTE and RobustScaler for topological integrity.
+3. **Control Plane (`config.yaml`):** Centralized threshold management for risk-routing.
+
+---
+
+## 🚀 Deployment (部署)
+
+1. **Local Sandbox (本地沙盒):**
+   ```bash
+   pip install -r requirements.txt
+   python src/train_pipeline.py
+   python local_test.py

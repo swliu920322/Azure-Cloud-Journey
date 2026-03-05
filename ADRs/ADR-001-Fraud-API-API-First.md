@@ -1,25 +1,82 @@
-# ADR-001: 放弃 RPA GUI 路径，执行 API-First 实时拦截
+# ADR-001: Bypassing RPA GUI for API-First Real-Time Interception
 
 * **Status:** Accepted
 * **Date:** 2026-03-05
-* **Decider:** Liu Shengwei
+* **Decider:** Liu Shengwei (戊土)
 
-## 1. 背景与上下文 (Context)
-在金融欺诈防御场景中，核心银行结算网关（Core Banking Gateway）通常存在严格的 **50ms 硬性超时**。现有的行业方案多采用 UIPath 等 RPA 工具。这些工具需要通过 GUI 模拟人工点击来执行账户冻结，其实测延迟通常在秒级，导致“预测到了欺诈，但资金已离境”的语义失明。
+---
 
-## 2. 决策 (Decision)
-我决定彻底抛弃视觉依赖（Visual Dependency），执行 **API-First 架构策略**：
-1. **剥离 GUI:** 移除所有 UiPath 模拟点击层。
-2. **后端直连:** 推理引擎得出 `Risk_Score >= 0.90` 后，直接调用 Azure Functions 触发银行底盘的 REST API 执行锁定。
-3. **预热机制:** 在全局空间加载模型资产，消除 Serverless 函数的冷启动开销。
+## Part I: English Architecture Documentation
 
-## 3. 物理影响 (Consequences)
-* **延迟突破:** 整体链路延迟从原来的 >1000ms 暴降至 **22ms**，成功切入 50ms 的物理死线。
-* **系统稳定性:** 避开了 GUI 渲染带来的不可预测性错误。
-* **代价:** 放弃了非技术人员的可视化操作流程，合规审计改为基于底层的日志流（Logging Stream）。
+### 1. Context & Problem Statement
+Financial institutions operate under a critical **50ms latency gateway**. Existing solutions often rely on RPA tools (e.g., UiPath) to simulate human GUI interactions for account freezing. However, GUI rendering and element location incur multi-second delays, leading to "Semantic Blindness"—where fraud is predicted, but funds are cleared before the action is executed.
 
-## 4. 验证证明 (Evidence)
-* 压测环境: Azure Function (Consumption Plan)
-* 验证工具: Postman
-* 结果: 稳定返回 22ms。
-![Azure API 压测实证](../projects/01-Fraud-Interception-API/assets/delay.png)
+### 2. Decision Drivers
+* **Latency First:** The end-to-end execution must be sub-30ms to ensure the gateway is intercepted.
+* **Data Imbalance:** Handling 0.173% fraud minority class without losing topological features.
+* **Zero Manual Intervention:** Eliminating human cognitive fatigue in high-velocity streams.
+
+### 3. Considered Options
+
+#### Option 1: Legacy RPA GUI Execution
+* **Cons:** Latency > 2000ms. High failure rate due to UI volatility.
+* **Result:** **REJECTED** due to physical latency constraints.
+
+#### Option 2: Deep Learning (MLP/GNN)
+* **Pros:** Slightly higher accuracy in static testing.
+* **Cons:** Matrix multiplication on CPU creates 20ms+ inference overhead.
+* **Result:** **REJECTED** to reserve latency budget for network handshake.
+
+
+
+#### Option 3: XGBoost + API-First Serverless
+* **Pros:** Sub-2ms local inference; Direct REST API calls to banking backends.
+* **Result:** **ACCEPTED** as the primary architectural path.
+
+### 4. Proposed Solution
+We implement an **API-First Routing Matrix** deployed on **Azure Functions**:
+1. **Feature Engineering:** Use `RobustScaler` to preserve financial outliers and `SMOTE` for minority oversampling in training.
+2. **Inference:** Deploy a constrained `XGBoost` model (`max_depth=6`) to minimize compute cycles.
+3. **Execution:** If `Risk_Score >= 0.90`, the system bypasses all GUI layers and directly triggers the `/api/v1/account/lock` endpoint via a secure REST call.
+
+### 5. Consequences & Metrics
+* **Execution Speed:** Latency dropped to **22ms** (P95), clearing the 50ms gateway deathline.
+* **Precision/Recall:** Achieved **92.86% Recall** for critical fraud.
+* **User Friction:** Verification friction limited to **2.89%** of legitimate traffic.
+
+<p>
+  <img src="../projects/01-Fraud-Interception-API/assets/delay.png" alt="22ms Latency Proof" width="500">
+  <br>
+  <i>Figure 1: Postman latency verification (Clocked at 22ms)</i>
+</p>
+---
+
+## 第二部分：中文架构决策复盘
+
+### 1. 背景与问题陈述
+金融机构面临极其苛刻的 **50ms 结算网关死线**。 现有方案多依赖 RPA 工具（如 UiPath）模拟人工 GUI 操作来执行账户冻结。 然而，GUI 渲染和元素定位会产生秒级延迟，导致“语义失明”：即预测到了欺诈，但在执行拦截前资金已完成清算。
+
+### 2. 决策驱动因素
+* **延迟优先：** 端到端执行必须在 30ms 内，以确保网关拦截成功。
+* **数据失衡：** 处理 0.173% 的极少数欺诈类数据，且不丢失拓扑特征。
+* **零人工干预：** 消除高频交易流中的人工认知疲劳。
+
+### 3. 候选方案对比
+* **方案 1：传统 RPA GUI 执行。** 延迟 > 2000ms，因物理延迟限制被**否决**。
+* **方案 2：深度学习 (MLP/GNN)。** CPU 矩阵运算产生超过 20ms 的推理开销，为保留网络握手带宽而被**否决**。
+* **方案 3：XGBoost + API-First 无服务器架构。** 具备亚毫秒级本地推理能力，通过 REST API 直连银行后端，被**采纳**为核心路径。
+
+### 4. 最终决策方案
+我们执行部署在 **Azure Functions** 上的 **API-First 路由矩阵**：
+1. **特征工程：** 使用 `RobustScaler` 保护金融异常值拓扑，并在训练环节使用 `SMOTE` 进行过采样。
+2. **推理：** 部署受限 `XGBoost` 模型（`max_depth=6`）以最小化计算周期。
+3. **执行：** 若风险评分 $\ge 0.90$，系统绕过所有 GUI 层，直接触发底层账户锁定接口。
+
+### 5. 结果与物理指标
+* **执行速度：** 延迟降至 **22ms**，成功切入 50ms 网关死线。
+* **拦截召回率：** 核心欺诈拦截率达到 **92.86%**。
+* **用户摩擦：** 合法流量的验证摩擦率严格控制在 **2.89%**。
+
+---
+"In Cloud Architecture, the only truth is the latency log."
+
