@@ -1,52 +1,54 @@
-# ADR-002: Implementation of Asymmetric ML Funnel (iForest + SVM) for Real-time Interception
+## **[ADR-002: Implementation of Asymmetric ML Funnel & RAG Latency Trade-offs]**
 
 **Status:** Accepted
-**Date:** 2026-03-05
+**Date:** 2026-03-17
 **Context:** `projects/02-Agentic-RPA-Compliance`
 
-## 1. Context
-Traditional rule-based RPA systems are too rigid to handle sophisticated fraud like "smurfing." They generate excessive false positives and cause cognitive fatigue for human reviewers. In our simulation of 10,000 transactions, manual review required 22.2 hours. We need a system that automates the decision-making process while maintaining low latency and high accuracy.
+**1. Context & Decision Drivers**
+Traditional rule-based RPA suffers from semantic blindness, generating massive false positives against structured "smurfing" tactics. Manual compliance review of 10,000 transactions requires ~22.2 hours. We require an architecture that automates decisions while maintaining ultra-low latency and strict legal explainability.
 
-## 2. Decision Drivers
-1.  **Throughput Efficiency:** Must process high volumes of data without human bottlenecks.
-2.  **Explainability:** Every automated action must be grounded in regulatory text (AML laws).
-3.  **UI Resilience:** Avoid fragile UI-based automation in favor of industrial-grade API execution.
+- **Throughput:** Must process high-frequency API streams without compute bottlenecks.
+- **Explainability:** Black-box AI is legally void. Actions must map to statutory AML texts.
+- **Execution Resilience:** Reject fragile UI-automation. Force industrial-grade API integration.
 
-## 3. Proposed Solution: The Hybrid AI Funnel
-We implemented a two-stage machine learning pipeline integrated with Agentic RPA:
-1.  **Stage 1 - Isolation Forest (iForest):** Used for "Broad Sniffing." It processes 10,000 records in memory in ~5 seconds, clearing 95% of routine traffic almost instantly.
-2.  **Stage 2 - Support Vector Machine (SVM):** Used for "Precision Interception." It executes high-dimensional hard-margin cuts on the remaining 5% of outliers (~10 seconds total).
-3.  **Explainable AI (RAG):** When high risk is detected, a RAG module cross-references the features against an AML statute database, generating human-readable evidence (e.g., "AML Article 4").
-4.  **API-First RPA:** UiPath bots bypass the UI and use `HTTP POST /api/lockBusiness` to trigger immediate asset freezes at the gateway level.
+**2. Proposed Solution: The Adapter Theory in Action**
+We deployed a four-tier architecture acting as an "Adapter" to convert AI probability into physical execution:
 
-## 4. Consequences
-* **155x Speed Improvement:** Total processing time dropped from 22.2 hours to 8.5 minutes for 10,000 records.
-* **Audit Integrity:** Every block is justified by regulatory evidence rather than a "black-box" score.
-* **Engineering Constraint:** Requires a high-quality vector database for the RAG component to remain accurate.
+- **Stage 1 (Data Minimization):** Ingress tokenization strips PII via MD5 hashing before ML ingestion.
+- **Stage 2 (Asymmetric ML Funnel):** Isolation Forest (iForest) clears 95% of routine traffic in memory (~5s). Support Vector Machine (SVM) executes heavy hard-margin cuts strictly on the remaining 5% outliers (~10s).
+- **Stage 3 (Cognitive RAG):** Cross-references SVM outliers against an AML vector database to generate human-readable legal evidence.
+- **Stage 4 (API-First RPA):** Bypasses UI entirely. Triggers `HTTP POST /api/lockBusiness` to freeze assets directly.
+
+**3. Physical Trade-offs & Consequences**
+
+- **Throughput Impact:** Pipeline latency dropped from 22.2 hours to 8.5 minutes (155x improvement).
+- **RAG Latency Compromise:** *Crucial Trade-off*. Initial tests showed massive vector retrieval spikes gateway latency. We enforced strict data minimization: the RAG module operates as an asynchronous 'cold-path', triggered ONLY when SVM confidence > 0.8. We trade absolute, comprehensive legal context for required sub-second physical execution.
+- **Azure Mapping Readiness:** Architecture explicitly mirrors AZ-305 targets (Azure APIM, Azure Machine Learning, Azure AI Search, Logic Apps), securing cross-cloud scalability.
 ---
 
-# ADR-002：实施基于非对称 ML 漏斗 (iForest + SVM) 的实时拦截架构
+## **[ADR-002: 基于非对称 ML 漏斗与 RAG 延迟妥协的实时拦截架构]**
 
 **状态：** 已接受
-**日期：** 2026-03-05
+**日期：** 2026-03-17
 **上下文：** `projects/02-Agentic-RPA-Compliance`
 
-## 1. 背景
-传统基于规则的 RPA 系统过于僵化，无法处理“蓝精灵”洗钱等复杂欺诈。它们会产生大量误报，并导致人工审查员产生认知疲劳。在我们的 10,000 条交易模拟中，人工审查需要 22.2 小时。我们需要一个能在保持低延迟和高准确性的同时，实现决策自动化的系统。
+**1. 背景与决策驱动力**
+传统规则型 RPA 存在严重的语义盲区。在应对“蓝精灵”结构化洗钱时，会产生毁灭性的误报率。压测显示，人工审查 10,000 条交易需耗时约 22.2 小时。我们需要一套能在毫秒级延迟下实现自动化决策，并保持绝对法律可解释性的系统。
 
-## 2. 决策驱动力
-1.  **吞吐效率：** 必须在没有人工瓶颈的情况下处理海量数据。
-2.  **可解释性：** 每一项自动化动作必须以监管文本（AML 法律）为依据。
-3.  **UI 韧性：** 放弃脆弱的基于 UI 的自动化，转而采用工业级 API 执行。
+- **吞吐量：** 必须在无算力瓶颈的情况下处理高频 API 数据流。
+- **可解释性：** 黑盒 AI 在金融界不具备法律效力。拦截动作必须有法定反洗钱文本支撑。
+- **执行韧性：** 彻底抛弃脆弱的 UI 自动化。强制执行工业级 API 对接。
 
-## 3. 建议方案：混合 AI 漏斗
-我们实施了一个与智能体 RPA 集成的两阶段机器学习流水线：
-1.  **阶段 1 - 隔离森林 (iForest)：** 用于“广域嗅探”。它在约 5 秒内处理内存中的 10,000 条记录，几乎瞬间清空 95% 的常规流量。
-2.  **阶段 2 - 支持向量机 (SVM)：** 用于“精准拦截”。它对剩余 5% 的异常数据执行高维硬边缘切割（总耗时约 10 秒）。
-3.  **可解释 AI (RAG)：** 当检测到高风险时，RAG 模块将特征与反洗钱法规数据库进行交叉引用，生成人类可读的证据（如“反洗钱法第四条”）。
-4.  **API 优先 RPA：** UiPath 机器人绕过 UI，使用 `HTTP POST /api/lockBusiness` 在网关层触发即时资产冻结。
+**2. 架构决策：适配器理论的物理落地**
+我们部署了四层架构，作为将 AI 概率转换为物理动作的“适配器 (Adapter)”：
 
-## 4. 后果
-* **155 倍速度提升：** 10,000 条记录的总处理时间从 22.2 小时下降到 8.5 分钟。
-* **审计完整性：** 每一项拦截都有法规证据支持，而非“黑盒”分值。
-* **工程约束：** 需要高质量的向量数据库以保持 RAG 组件的准确性。
+- **阶段 1 (数据极小化)：** 入口层强制执行 MD5 散列，在进入 ML 引擎前剥离所有 PII 敏感数据。
+- **阶段 2 (非对称 ML 漏斗)：** 隔离森林 (iForest) 在内存中瞬间清空 95% 常规流量 (约 5 秒)。支持向量机 (SVM) 将高维硬边缘切割严格限制在剩余 5% 的异常点上 (约 10 秒)。
+- **阶段 3 (认知 RAG)：** 将 SVM 圈定的异常特征与 AML 向量数据库交叉比对，生成人类可读的法定证据。
+- **阶段 4 (API 优先执行)：** RPA 机器人彻底绕过 UI。异步触发 `HTTP POST /api/lockBusiness`，在网关层执行物理级资产冻结。
+
+**3. 物理妥协与后果**
+
+- **吞吐量收益：** 压测耗时从 22.2 小时断崖式暴跌至 8.5 分钟 (吞吐量飙升 155 倍)。
+- **RAG 延迟妥协 (核心决策)：** 压测表明，无限制的 RAG 向量检索会产生极高 IOPS，直接拖垮网关响应。我们强制执行降级策略：RAG 降维为异步“冷路径”，仅在 SVM 置信度 > 0.8 时触发。用牺牲绝对全局上下文的代价，换取网关必须的亚秒级执行速度。
+- **Azure 云原生对齐：** 架构全量映射 AZ-305 组件库 (Azure APIM, Azure ML Workspace, Azure AI Search, Logic Apps)，为后续跨云架构打通物理底层。
